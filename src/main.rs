@@ -2,6 +2,7 @@
 #![allow(unused_imports)]
 #![allow(unused)]
 
+pub mod config;
 pub mod engine;
 pub mod schema;
 
@@ -16,52 +17,49 @@ use tokio::sync::Semaphore;
 
 #[tokio::main]
 async fn main() {
-    // load env vars
-    dotenv().ok();
-    let user_agent = std::env::var("EMAIL").unwrap();
-    let finnhub_api_key = std::env::var("FINNHUB_API_KEY").unwrap();
-    let finnhub_auth = std::env::var("FINNHUB_AUTH").unwrap();
 
-    // Bulk GET requests
-    // =================
-    let urls = vec![
-        "https://www.sec.gov/Archives/edgar/daily-index/xbrl/companyfacts.zip",
-        // "https://www.sec.gov/Archives/edgar/daily-index/bulkdata/submissions.zip",
-        "https://www.sec.gov/files/company_tickers.json",
-    ];
-    engine::bulk_url_download(urls, , 3).await;
-    engine::unzip("./data/companyfacts.zip", "./data/facts").await;
+    config::load_toml("config.toml");
 
-    // [.zip -> pgsql] migration
-    // =========================
-    println!("Initialising PostgreSQL tables ...");
-    engine::pg_init().await;
-
-    let companies = engine::read_json_file::<HashMap<String, schema::SecCompanies>>(
-        "./data/company_tickers.json",
-    )
-    .await
-    .expect("ERROR! Failed to read SEC company list");
-
-    let semaphore = Arc::new(Semaphore::new(35));
-    let mut handles = vec![];
-    for (_key, company) in companies {
-        // possible async/task_spawn upgrade here?
-        let permit = semaphore.clone().acquire_owned().await.unwrap();
-        handles.push(tokio::spawn(async move {
-            let facts_paths = format!("./data/facts/CIK{:010}.json", &company.cik_str);
-            println!(
-                "Inserting values for: {} - {}",
-                &company.ticker, &company.title
-            );
-            engine::pg_dump(&facts_paths).await;
-            drop(permit);
-        }));
-
-        for handle in &handles {
-            handle;
-        }
-    }
+    // // Bulk GET requests
+    // // =================
+    // let urls = vec![
+    //     "https://www.sec.gov/Archives/edgar/daily-index/xbrl/companyfacts.zip",
+    //     // "https://www.sec.gov/Archives/edgar/daily-index/bulkdata/submissions.zip",
+    //     "https://www.sec.gov/files/company_tickers.json",
+    // ];
+    // engine::bulk_url_download(urls, , 3).await;
+    // engine::unzip("./data/companyfacts.zip", "./data/facts").await;
+    //
+    // // [.zip -> pgsql] migration
+    // // =========================
+    // println!("Initialising PostgreSQL tables ...");
+    // engine::pg_init().await;
+    //
+    // let companies = engine::read_json_file::<HashMap<String, schema::SecCompanies>>(
+    //     "./data/company_tickers.json",
+    // )
+    // .await
+    // .expect("ERROR! Failed to read SEC company list");
+    //
+    // let semaphore = Arc::new(Semaphore::new(35));
+    // let mut handles = vec![];
+    // for (_key, company) in companies {
+    //     // possible async/task_spawn upgrade here?
+    //     let permit = semaphore.clone().acquire_owned().await.unwrap();
+    //     handles.push(tokio::spawn(async move {
+    //         let facts_paths = format!("./data/facts/CIK{:010}.json", &company.cik_str);
+    //         println!(
+    //             "Inserting values for: {} - {}",
+    //             &company.ticker, &company.title
+    //         );
+    //         engine::pg_dump(&facts_paths).await;
+    //         drop(permit);
+    //     }));
+    //
+    //     for handle in &handles {
+    //         handle;
+    //     }
+    // }
 
     // FinnHub
     // =======
