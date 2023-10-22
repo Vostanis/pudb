@@ -6,37 +6,37 @@ use toml;
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Config {
-    auth: Auth,
-    keys: Keys,
-    server: Server,
-    database: Database,
+    pub auth: Auth,
+    pub keys: Keys,
+    pub server: Server,
+    pub database: Database,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Auth {
-    user_agent: String,
+    pub user_agent: String,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Keys {
-    finnhub: String,
-    mexc: String,
+    pub finnhub: String,
+    pub mexc: String,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Server {
-    host: String,
-    port: String,
+    pub host: String,
+    pub port: String,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Database {
-    name: String,
-    username: String,
+    pub name: String,
+    pub username: String,
     password: String,
 }
 
-pub fn load_toml(file: &str) {
+pub fn load_toml(file: &str) -> Config {
     let mut file = File::open("config.toml")
         .expect("ERROR! Failed to open file");
     
@@ -46,4 +46,6 @@ pub fn load_toml(file: &str) {
     
     let toml: Config = toml::from_str(&contents)
         .expect("ERROR! Failed to read .toml from String");
+
+    toml
 }
