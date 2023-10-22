@@ -9,42 +9,7 @@ use std::{
 
 use crate::schema::{self, SecCompany};
 
-// Initiliase Environment Variables
-pub fn init_env() {
-    let env_path = ".env";
-    let default_vars: Vec<String> = vec![
-        "EMAIL".to_string(),
-        "FINNHUB_API_KEY".to_string(),
-    ];
-
-    if !fs::metadata(env_path).is_ok() {
-        let mut env_string = String::new();
-        for var in &default_vars {
-            let separator = "=\n";
-            env_string.push_str(&var);
-            env_string.push_str(&separator);
-        }
-        println!("{env_string}");
-        fs::write(env_path, env_string)
-            .expect("ERROR! Unable to write .env");
-    }
-
-    for var in &default_vars {
-        match std::env::var(var) {
-            Ok(val) => (),
-            Err(e) => {
-                println!("{var}:");
-                let mut input = String::new();
-                io::stdin().read_line(&mut input)
-                    .expect("ERROR! Unable to take input");
-                std::env::set_var(var, input);
-            },
-        }
-    }
-}
-
-// 1. bulk url download of a vector of String URLs, with n (multi)threads,
-//    specifying a User Agent
+// 1. bulk url download of a vector of String URLs, with n (multi)threads
 pub async fn bulk_url_download(
     endpoints: Vec<&str>, 
     user_agent: &str, 
@@ -111,27 +76,6 @@ pub async fn unzip(zip_file_path: &str, target_dir: &str) {
     }
 }
 
-// 3. read a json file into a struct specified in the fn type-cast
-// NEEDS ERROR HANDLING!!!
-// pub async fn read_json_file<T: serde::de::DeserializeOwned>(
-//     file_path: &str
-// ) -> T {
-//     let mut file = std::fs::File::open(file_path);
-//     match file {
-//         Ok(file) => {
-//             let mut file_str = String::new();
-//             match file.read_to_string(&mut file_str) {
-//                 Ok(file_string) => {
-//                     let structured_json: T = serde_json::from_str(&file_str).expect("ERROR! Failed to read JSON from string");
-//                     structured_json
-//                 },
-//                 Err(_) => println!("ERROR! Failed to read file to file string"),
-//             }
-//         },
-//         Err(_) => println!("ERROR! Failed to read file {file_path}"),
-//     }
-// }
-
 pub async fn read_json_file<T: serde::de::DeserializeOwned>(
     file_path: &str,
 ) -> Result<T, Box<dyn Error + Send + Sync>> {
@@ -143,11 +87,10 @@ pub async fn read_json_file<T: serde::de::DeserializeOwned>(
     Ok(json)
 }
 
-// 4. initialise pgsql tables
+// 3. initialise pgsql tables
 pub async fn pg_init(host: &str, port: &str, user: &str, dbname: &str, password: &str) {
     let config_str = format!("host={host} port={port} user={user} dbname={dbname} password={password}"); 
     let (client, connection) = tokio_postgres::connect(
-        // "host=localhost port=5432 user=postgres dbname=postgres password=postgres",
         &config_str,
         tokio_postgres::NoTls,
     )
@@ -194,11 +137,11 @@ pub async fn pg_init(host: &str, port: &str, user: &str, dbname: &str, password:
     }
 }
 
-// 5. insert into all files into docker-compose: postgres
-// NEEDS ASYNC UPGRADE
-pub async fn pg_dump(file_path: &str) {
+// 4. insert into all files into docker-compose: postgres
+pub async fn pg_dump(file_path: &str, host: &str, port: &str, user: &str, dbname: &str, password: &str) {
+    let config_str = format!("host={host} port={port} user={user} dbname={dbname} password={password}"); 
     let (client, connection) = tokio_postgres::connect(
-        "host=localhost port=5432 user=postgres dbname=postgres password=postgres",
+        &config_str,
         tokio_postgres::NoTls,
     )
     .await
@@ -210,11 +153,6 @@ pub async fn pg_dump(file_path: &str) {
             eprintln!("ERROR! Connection failed: {}", e);
         }
     });
-
-    // for all json files, insert into
-    // let data = read_json_file::<schema::SecCompany>(file_path)
-    //     .await
-    //     .expect("ERROR! Failed to read file path");
 
     match read_json_file::<schema::SecCompany>(file_path).await {
         Ok(data) => {
@@ -262,8 +200,6 @@ pub async fn pg_dump(file_path: &str) {
                         )
                         .await
                         .expect("ERROR! Failed to complete INSERT query for SEC company fact data");
-
-                    // println!("{:#?}", sql);
                 }
             }
         }

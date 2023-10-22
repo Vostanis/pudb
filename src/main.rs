@@ -24,11 +24,10 @@ use tokio::sync::Semaphore;
 
 #[tokio::main]
 async fn main() {
-
+    // Load config variables
     let config = config::load_toml("config.toml");
 
     // Bulk GET requests
-    // =================
     let urls = vec![
         "https://www.sec.gov/Archives/edgar/daily-index/xbrl/companyfacts.zip",
         // "https://www.sec.gov/Archives/edgar/daily-index/bulkdata/submissions.zip",
@@ -38,7 +37,6 @@ async fn main() {
     engine::unzip("./data/companyfacts.zip", "./data/facts").await;
 
     // [.zip -> pgsql] migration
-    // =========================
     println!("Initialising PostgreSQL tables ...");
     engine::pg_init(
         &config.server.host, 
@@ -58,16 +56,20 @@ async fn main() {
     let mut handles = vec![];
     for (_key, company) in companies {
         let permit = semaphore.clone().acquire_owned().await.unwrap();
+        let config_copy = config.clone();
         handles.push(tokio::spawn(async move {
             let facts_paths = format!("./data/facts/CIK{:010}.json", &company.cik_str);
-            println!(
-                "Inserting values for: {} - {}",
-                &company.ticker, &company.title
-            );
-            engine::pg_dump(&facts_paths).await;
+            println!("Inserting values for: {} - {}", &company.ticker, &company.title);
+            engine::pg_dump(
+                &facts_paths, 
+                &config_copy.server.host, 
+                &config_copy.server.port, 
+                &config_copy.database.username, 
+                &config_copy.database.name, 
+                &config_copy.database.password
+            ).await;
             drop(permit);
         }));
-
         for handle in &handles {
             handle;
         }
