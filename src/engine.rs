@@ -1,12 +1,55 @@
 use futures::stream::StreamExt;
-use std::error::Error;
-use std::io::Read;
+use serde::Deserialize;
+use std::{
+    error::Error,
+    io,
+    io::Read, // not sure why Rust is insisting on this separate import for futures?
+    fs,
+};
 
 use crate::schema::{self, SecCompany};
 
+// Initiliase Environment Variables
+pub fn init_env() {
+    let env_path = ".env";
+    let default_vars: Vec<String> = vec![
+        "EMAIL".to_string(),
+        "FINNHUB_API_KEY".to_string(),
+    ];
+
+    if !fs::metadata(env_path).is_ok() {
+        let mut env_string = String::new();
+        for var in &default_vars {
+            let separator = "=\n";
+            env_string.push_str(&var);
+            env_string.push_str(&separator);
+        }
+        println!("{env_string}");
+        fs::write(env_path, env_string)
+            .expect("ERROR! Unable to write .env");
+    }
+
+    for var in &default_vars {
+        match std::env::var(var) {
+            Ok(val) => (),
+            Err(e) => {
+                println!("{var}:");
+                let mut input = String::new();
+                io::stdin().read_line(&mut input)
+                    .expect("ERROR! Unable to take input");
+                std::env::set_var(var, input);
+            },
+        }
+    }
+}
+
 // 1. bulk url download of a vector of String URLs, with n (multi)threads,
 //    specifying a User Agent
-pub async fn bulk_url_download(endpoints: Vec<&str>, user_agent: &str, n_threads: usize) {
+pub async fn bulk_url_download(
+    endpoints: Vec<&str>, 
+    user_agent: &str, 
+    n_threads: usize
+) {
     let client = reqwest::Client::new();
     futures::stream::iter(endpoints.into_iter().map(|url| {
         // model the request as a Future
@@ -101,9 +144,11 @@ pub async fn read_json_file<T: serde::de::DeserializeOwned>(
 }
 
 // 4. initialise pgsql tables
-pub async fn pg_init() {
+pub async fn pg_init(host: &str, port: &str, user: &str, dbname: &str, password: &str) {
+    let config_str = format!("host={host} port={port} user={user} dbname={dbname} password={password}"); 
     let (client, connection) = tokio_postgres::connect(
-        "host=localhost port=5432 user=postgres dbname=postgres password=postgres",
+        // "host=localhost port=5432 user=postgres dbname=postgres password=postgres",
+        &config_str,
         tokio_postgres::NoTls,
     )
     .await
@@ -114,7 +159,7 @@ pub async fn pg_init() {
         if let Err(e) = connection.await {
             eprintln!("ERROR! Connection failed: {}", e);
         } else {
-            println!("Inital connection succesful")
+            println!("Initial connection succesful")
         }
     });
 
