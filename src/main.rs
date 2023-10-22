@@ -40,14 +40,18 @@ async fn main() {
     // [.zip -> pgsql] migration
     // =========================
     println!("Initialising PostgreSQL tables ...");
-    engine::pg_init().await;
+    engine::pg_init(
+        &config.server.host, 
+        &config.server.port, 
+        &config.database.username, 
+        &config.database.name, 
+        &config.database.password
+    ).await;
 
     // Load the list of all Company Names/Tickers
     let companies = engine::read_json_file::<HashMap<String, schema::SecCompanies>>(
         "./data/company_tickers.json",
-    )
-        .await
-        .expect("ERROR! Failed to read SEC company list");
+    ).await.expect("ERROR! Failed to read SEC company list");
 
     // Copy .json files to PostgreSQL equivalents. ~35 concurrent threads seems best fit
     let semaphore = Arc::new(Semaphore::new(35));

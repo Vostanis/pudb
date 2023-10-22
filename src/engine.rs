@@ -144,9 +144,11 @@ pub async fn read_json_file<T: serde::de::DeserializeOwned>(
 }
 
 // 4. initialise pgsql tables
-pub async fn pg_init() {
+pub async fn pg_init(host: &str, port: &str, user: &str, dbname: &str, password: &str) {
+    let config_str = format!("host={host} port={port} user={user} dbname={dbname} password={password}"); 
     let (client, connection) = tokio_postgres::connect(
-        "host=localhost port=5432 user=postgres dbname=postgres password=postgres",
+        // "host=localhost port=5432 user=postgres dbname=postgres password=postgres",
+        &config_str,
         tokio_postgres::NoTls,
     )
     .await
