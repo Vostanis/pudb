@@ -14,14 +14,6 @@ use tokio::sync::Semaphore;
 // enter docker psql; terminal command:
 // sudo docker exec -it sec_api psql -U postgres -d postgres -p 5432 -W
 
-// To Do:
-//
-// 1. FinnHub
-// https://finnhub.io/api/v1/stock/candle?symbol={ticker}&resolution=1&from=1693493346&to=1693752546&token={api_key}
-// 30 calls per sec: code 429 if exceeded
-//
-// 2. MEXC
-
 #[tokio::main]
 async fn main() {
     // Load config variables

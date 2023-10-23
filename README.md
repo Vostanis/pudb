@@ -3,11 +3,19 @@ Ready-made PostgreSQL config for Finance-related data;
 	1. SEC Company Facts
         - large file, ~20GB, downloaded, unzipped, then formatted & placed in local pgsql db
     2. Finnhub
-    3. MEXC
+        - candlesticks (OHLCV)
+        - IPO calendar
+        - earnings calendar
+        - earnings surprises
+        - crypto (symbols, candles)
+        - patents
+        - senate lobbying
+        - VISA applications
 
 # Further Updates
     a. potential "src" directory format:
         src/
+            engine.rs
             config.rs
             sec/
                 engine.rs
@@ -25,7 +33,13 @@ Ready-made PostgreSQL config for Finance-related data;
             - bloomberg
             - financial times
             - reuters
+            - the times
+            - business insider
         aim for:
             - references to name/ticker symbols
             - statistics
             - date
+        directory:
+        src/webscraper/
+            engine.rs
+            schema.rs
