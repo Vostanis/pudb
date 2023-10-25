@@ -4,7 +4,7 @@ use std::fs::File;
 use std::io::Read;
 use toml;
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Config {
     pub auth: Auth,
     pub keys: Keys,
@@ -12,28 +12,28 @@ pub struct Config {
     pub database: Database,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Auth {
     pub user_agent: String,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Keys {
     pub finnhub: String,
     pub mexc: String,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Server {
     pub host: String,
     pub port: String,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Database {
     pub name: String,
     pub username: String,
-    pub password: String,
+    pub password: String, // should this be public?
 }
 
 pub fn load_toml(file: &str) -> Config {
