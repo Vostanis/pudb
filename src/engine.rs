@@ -8,10 +8,11 @@ use std::{
 };
 
 use crate::sec::{self, SecCompany};
+use crate::config::Config; 
 
 // GENERALISED FUNCTIONS
 
-// 1. bulk url download of a vector of String URLs, with n (multi)threads
+// bulk url download of a vector of String URLs, with n (multi)threads
 pub async fn bulk_url_download(
     endpoints: Vec<&str>, 
     user_agent: &str, 
@@ -61,7 +62,7 @@ pub async fn bulk_url_download(
     .await;
 }
 
-// 2. unzip file exttracts to target directory
+// unzip file exttracts to target directory
 pub async fn unzip(zip_file_path: &str, target_dir: &str) {
     match std::fs::File::open(zip_file_path) {
         Ok(file) => {
@@ -78,6 +79,7 @@ pub async fn unzip(zip_file_path: &str, target_dir: &str) {
     }
 }
 
+// read json file to type T
 pub async fn read_json_file<T: serde::de::DeserializeOwned>(
     file_path: &str,
 ) -> Result<T, Box<dyn Error + Send + Sync>> {
@@ -89,8 +91,16 @@ pub async fn read_json_file<T: serde::de::DeserializeOwned>(
     Ok(json)
 }
 
-// 3. initialise pgsql tables
-pub async fn psql_init(host: &str, port: &str, user: &str, dbname: &str, password: &str) {
+// initialise pgsql tables
+pub async fn psql_init(config: &Config) {
+
+    // set config "let"s so format! is usable
+    let host = &config.server.host;
+    let port = &config.server.port;
+    let user = &config.database.username;
+    let dbname = &config.database.name;
+    let password = &config.database.password;
+
     let config_str = format!("host={host} port={port} user={user} dbname={dbname} password={password}"); 
     let (client, connection) = tokio_postgres::connect(
         &config_str,
@@ -128,7 +138,6 @@ pub async fn psql_init(host: &str, port: &str, user: &str, dbname: &str, passwor
             filed           VARCHAR,
             frame           VARCHAR
         )",
-        // "SELECT * FROM raw.sec_data"
     ];
     for query in queries {
         let _init_tbl_sql = client
@@ -139,72 +148,3 @@ pub async fn psql_init(host: &str, port: &str, user: &str, dbname: &str, passwor
     }
 }
 
-// 4. insert into all files into docker-compose: postgres
-pub async fn pg_dump(file_path: &str, host: &str, port: &str, user: &str, dbname: &str, password: &str) {
-    let config_str = format!("host={host} port={port} user={user} dbname={dbname} password={password}"); 
-    let (client, connection) = tokio_postgres::connect(
-        &config_str,
-        tokio_postgres::NoTls,
-    )
-    .await
-    .expect("ERROR! Could not connect");
-
-    // single task to handle connection (error)
-    tokio::spawn(async move {
-        if let Err(e) = connection.await {
-            eprintln!("ERROR! Connection failed: {}", e);
-        }
-    });
-
-    match read_json_file::<schema::SecCompany>(file_path).await {
-        Ok(data) => {
-            if let Some(us_gaap_map) = &data.facts.us_gaap {
-                // handle us_gaap: Option<BTreeMap>
-                for metric in us_gaap_map.keys() {
-                    // since "unit of measurement" is stored as a key (in the struct architecture),
-                    // we do the following to obtain it, to then be place it into our pgsql table
-                    let unit: String = {
-                        let units_vec: Vec<_> = us_gaap_map[metric].units.keys().cloned().collect();
-                        units_vec[0].clone()
-                    };
-
-                    // let sql =
-                    let _sql = client
-                        .query(
-                            "
-                            INSERT INTO raw.sec_data (
-                                cik, entity_name, label, description, unit, 
-                                start_date, end_date, val, accn, fy, 
-                                fp, form, filed, frame
-                            )
-                            VALUES (
-                                $1, $2, $3, $4, $5, 
-                                $6, $7, $8, $9, $10,
-                                $11, $12, $13, $14
-                            )   
-                        ",
-                            &[
-                                &data.cik,
-                                &data.entity_name,
-                                &us_gaap_map[metric].label,
-                                &us_gaap_map[metric].description,
-                                &unit,
-                                &us_gaap_map[metric].units[&unit][0].start_date,
-                                &us_gaap_map[metric].units[&unit][0].end_date,
-                                &us_gaap_map[metric].units[&unit][0].val,
-                                &us_gaap_map[metric].units[&unit][0].accn,
-                                &us_gaap_map[metric].units[&unit][0].fy,
-                                &us_gaap_map[metric].units[&unit][0].fp,
-                                &us_gaap_map[metric].units[&unit][0].form,
-                                &us_gaap_map[metric].units[&unit][0].filed,
-                                &us_gaap_map[metric].units[&unit][0].frame,
-                            ],
-                        )
-                        .await
-                        .expect("ERROR! Failed to complete INSERT query for SEC company fact data");
-                }
-            }
-        }
-        Err(e) => eprintln!("ERROR! Failed to read {}; {}", file_path, e),
-    }
-}

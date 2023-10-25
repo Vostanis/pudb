@@ -33,7 +33,7 @@ pub struct Server {
 pub struct Database {
     pub name: String,
     pub username: String,
-    pub password: String,
+    pub password: String, // should this be public?
 }
 
 pub fn load_toml(file: &str) -> Config {

@@ -1,7 +1,10 @@
 use serde::{Deserialize, Deserializer};
 use std::collections::{BTreeMap, HashMap};
+use std::sync::Arc;
+use tokio::sync::Semaphore;
 
-use crate::engine;
+use crate::{engine, config::Config};
+
 
 /*  KNOWN ERRORS
     "No such file or directory exists (os error 2)"
@@ -13,25 +16,32 @@ use crate::engine;
 
 // download datasets
 pub async fn fetch_data(user_agent: &str) {
-    // Bulk GET requests
     let urls = vec![
         "https://www.sec.gov/Archives/edgar/daily-index/xbrl/companyfacts.zip",
-        // "https://www.sec.gov/Archives/edgar/daily-index/bulkdata/submissions.zip",
+        // "https://www.sec.gov/Archives/edgar/daily-index/bulkdata/submissions.zip",   // needs work
         "https://www.sec.gov/files/company_tickers.json",
     ];
     engine::bulk_url_download(urls, user_agent, 3).await;
     engine::unzip("./data/companyfacts.zip", "./data/facts").await;
 }
 
-// insert into all files into docker-compose: postgres
-pub async fn psql(file_path: &str, host: &str, port: &str, user: &str, dbname: &str, password: &str) {
+// single-thread version of psql insertion
+pub async fn psql(file_path: &str, config: &Config) { // NOT A FAN OF THIS: TOO LONG - generalise
+
+    // set config "let"s so format! is usable
+    let host = &config.server.host;
+    let port = &config.server.port;
+    let user = &config.database.username;
+    let dbname = &config.database.name;
+    let password = &config.database.password;
+
     let config_str = format!("host={host} port={port} user={user} dbname={dbname} password={password}"); 
     let (client, connection) = tokio_postgres::connect(
         &config_str,
         tokio_postgres::NoTls,
     )
     .await
-    .expect("ERROR! Could not connect");
+    .expect("ERROR! Could not connect to database");
 
     // single task to handle connection (error)
     tokio::spawn(async move {
@@ -46,7 +56,7 @@ pub async fn psql(file_path: &str, host: &str, port: &str, user: &str, dbname: &
                 // handle us_gaap: Option<BTreeMap>
                 for metric in us_gaap_map.keys() {
                     // since "unit of measurement" is stored as a key (in the struct architecture),
-                    // we do the following to obtain it, to then be place it into our pgsql table
+                    // we do the following to obtain it. this is then to be placed into our pgsql table
                     let unit: String = {
                         let units_vec: Vec<_> = us_gaap_map[metric].units.keys().cloned().collect();
                         units_vec[0].clone()
@@ -93,6 +103,34 @@ pub async fn psql(file_path: &str, host: &str, port: &str, user: &str, dbname: &
     }
 }
 
+// multithreaded version of psql insertion
+pub async fn psql_en_masse(config: &Config) {
+
+    let companies = engine::read_json_file::<HashMap<String, SecCompanies>>(
+        "./data/company_tickers.json",
+    ).await.expect("ERROR! Failed to read SEC company list");
+
+    // Copy .json files to PostgreSQL equivalents. ~35 concurrent threads seems best fit
+    let semaphore = Arc::new(Semaphore::new(35));
+    let mut handles = vec![];
+    for (_key, company) in companies {
+        let permit = semaphore.clone().acquire_owned().await.unwrap();
+        let config_copy = config.clone();
+        handles.push(tokio::spawn(async move {
+            let facts_paths = format!("./data/facts/CIK{:010}.json", &company.cik_str);
+            println!("Inserting values for: {} - {}", &company.ticker, &company.title);
+            psql(
+                &facts_paths, 
+                &config_copy
+            ).await;
+            drop(permit);
+        }));
+        for handle in &handles {
+            handle;
+        }
+    }
+}
+
 // CIK code can either be a 10-digit string, or shortened number; de_cik handles both
 fn de_cik<'de, D>(deserializer: D) -> Result<String, D::Error>
 where
@@ -121,7 +159,7 @@ where
     }
 }
 
-// menu data
+// company ticker overview
 #[derive(Debug, Deserialize)]
 pub struct SecCompanies {
     pub cik_str: i32,
