@@ -13,19 +13,12 @@ Ready-made PostgreSQL config for Finance-related data;
         - VISA applications
 
 # Further Updates
-    a. potential "src" directory format:
+    a. updated src/ directory format;
         src/
-            engine.rs
-            config.rs
-            sec/
-                engine.rs
-                schema.rs
-            finnhub/
-                engine.rs
-                schema.rs
-            mexc/
-                engine.rs
-                schema.rs
+            engine.rs   -- generalised functions, used across each api
+            config.rs   -- personal details; user-agent email etc.
+            sec.rs
+            finnhub.rs
 
     b. news webscraper
         domains:

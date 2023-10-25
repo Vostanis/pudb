@@ -7,7 +7,9 @@ use std::{
     fs,
 };
 
-use crate::schema::{self, SecCompany};
+use crate::sec::{self, SecCompany};
+
+// GENERALISED FUNCTIONS
 
 // 1. bulk url download of a vector of String URLs, with n (multi)threads
 pub async fn bulk_url_download(
@@ -88,7 +90,7 @@ pub async fn read_json_file<T: serde::de::DeserializeOwned>(
 }
 
 // 3. initialise pgsql tables
-pub async fn pg_init(host: &str, port: &str, user: &str, dbname: &str, password: &str) {
+pub async fn psql_init(host: &str, port: &str, user: &str, dbname: &str, password: &str) {
     let config_str = format!("host={host} port={port} user={user} dbname={dbname} password={password}"); 
     let (client, connection) = tokio_postgres::connect(
         &config_str,

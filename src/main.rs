@@ -4,7 +4,7 @@
 
 pub mod config;
 pub mod engine;
-pub mod schema;
+pub mod sec;
 
 // use anyhow::Result;
 use std::collections::HashMap;
@@ -19,18 +19,12 @@ async fn main() {
     // Load config variables
     let config = config::load_toml("config.toml");
 
-    // Bulk GET requests
-    let urls = vec![
-        "https://www.sec.gov/Archives/edgar/daily-index/xbrl/companyfacts.zip",
-        // "https://www.sec.gov/Archives/edgar/daily-index/bulkdata/submissions.zip",
-        "https://www.sec.gov/files/company_tickers.json",
-    ];
-    engine::bulk_url_download(urls, &config.auth.user_agent, 3).await;
-    engine::unzip("./data/companyfacts.zip", "./data/facts").await;
+    // fetch (& prepare) data sources
+    sec::fetch_data(&config.auth.user_agent).await;
 
-    // [.zip -> pgsql] migration
+    // create (or reset) psql tables
     println!("Initialising PostgreSQL tables ...");
-    engine::pg_init(
+    engine::psql_init(
         &config.server.host, 
         &config.server.port, 
         &config.database.username, 
@@ -39,7 +33,7 @@ async fn main() {
     ).await;
 
     // Load the list of all Company Names/Tickers
-    let companies = engine::read_json_file::<HashMap<String, schema::SecCompanies>>(
+    let companies = engine::read_json_file::<HashMap<String, sec::SecCompanies>>(
         "./data/company_tickers.json",
     ).await.expect("ERROR! Failed to read SEC company list");
 
@@ -52,7 +46,7 @@ async fn main() {
         handles.push(tokio::spawn(async move {
             let facts_paths = format!("./data/facts/CIK{:010}.json", &company.cik_str);
             println!("Inserting values for: {} - {}", &company.ticker, &company.title);
-            engine::pg_dump(
+            sec::psql(
                 &facts_paths, 
                 &config_copy.server.host, 
                 &config_copy.server.port, 

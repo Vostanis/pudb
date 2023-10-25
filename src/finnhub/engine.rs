@@ -1,19 +1,13 @@
 // 30 calls per sec: code 429 if exceeded
 // https://finnhub.io/api/v1/
 
-let base_url = "https://finnhub.io/api/v1/";
+use crate::engine;
+use reqwest;
 
-use serde::Deserialize;
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct StockSymbol {
-    currency: String,
-    description: String,
-    display_symbol: String,
-    figi: String,
-    mic: String,
-    symbol: String,
-    #[serde(rename = "type")] // type is a Rust keyword
-    stock_type: String,
+pub async fn finnhub_bulk_download() {
+    let urls: Vec<String> = vec![
+        
+    ];
 }
+let base_url: &str = "https://finnhub.io/api/v1/";
+
