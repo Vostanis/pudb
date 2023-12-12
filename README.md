@@ -28,13 +28,13 @@ Ready-made PostgreSQL config for Finance-related data;
     - [ ] continue to add to struct (plan for reusability)
 
 - [ ] implement Webscraper on PU-DB: 
-    domains:
-    - [ ] google
-    - [ ] bloomberg
-    - [ ] financial times
-    - [ ] reuters
-    - [ ] the times
-    - [ ] business insider
+    - [ ] domains:
+        - [ ] google
+        - [ ] bloomberg
+        - [ ] financial times
+        - [ ] reuters
+        - [ ] the times
+        - [ ] business insider
  
 aim for:
 + references to name/ticker symbols
