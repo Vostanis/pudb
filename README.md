@@ -1,23 +1,21 @@
 # Required Dependencies
-```
 docker-compose
-```
 
 # Pop-up Database (P-U DB)
 Ready-made PostgreSQL config for Finance-related data;
 
 ## 1. SEC Company Facts
-_ large file, ~20GB, downloaded, unzipped, then formatted & placed in local pgsql db
++ large file, ~20GB, downloaded, unzipped, then formatted & placed in local pgsql db
 
 ## 2. Finnhub
-_ candlesticks (OHLCV)
-_ IPO calendar
-_ earnings calendar
-_ earnings surprises
-_ crypto (symbols, candles)
-_ patents
-_ senate lobbying
-_ VISA applications
++ candlesticks (OHLCV)
++ IPO calendar
++ earnings calendar
++ earnings surprises
++ crypto (symbols, candles)
++ patents
++ senate lobbying
++ VISA applications
 
 # To do
 - [ ] finnhub api
@@ -38,7 +36,7 @@ _ VISA applications
     - [ ] the times
     - [ ] business insider
  
-    aim for:
-        _ references to name/ticker symbols
-        _ statistics
-        _ date
+aim for:
++ references to name/ticker symbols
++ statistics
++ date
