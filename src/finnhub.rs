@@ -1,6 +1,6 @@
 use serde::Deserialize;
 
-use crate::config;
+use crate::config::Config;
 
 static BASE: &'static str = "https://finnhub.io/api/v1/";
 
