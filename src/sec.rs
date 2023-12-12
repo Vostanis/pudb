@@ -111,6 +111,7 @@ pub async fn psql_en_masse(config: &Config) {
     ).await.expect("ERROR! Failed to read SEC company list");
 
     // Copy .json files to PostgreSQL equivalents. ~35 concurrent threads seems best fit
+    // Should play around with dynamism in threading
     let semaphore = Arc::new(Semaphore::new(35));
     let mut handles = vec![];
     for (_key, company) in companies {

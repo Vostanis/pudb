@@ -1,13 +1,13 @@
 [auth]
-user_agent = "example_email@email_domain.com"
+user_agent = "kimonvostanis@gmail.com"
 
 [keys]
-finnhub = ""
+finnhub = "ck5v6l9r01qls0umdfugck5v6l9r01qls0umdfv0"
 mexc = ""
 
 [server]
 host = "localhost"
-port = "5432:5432"
+port = "5432"
 
 [database]
 name = "postgres"

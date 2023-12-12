@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.75"
 bytes = "1.4.0"
+docker-rs = "0.1.0"
 dotenv = "0.15.0"
 futures = "0.3.28"
 reqwest = { version = "0.11.18", features = ["json"] }
